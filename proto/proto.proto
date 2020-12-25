@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package merry_proto;
+option go_package = "";
+
+enum StatusCode {
+    kOK = 0;
+    kNotExist = 1;
+}
+
+message FileRequest {
+    string path = 1;
+    int64 offset = 2;
+    int32 bandwidth = 3;
+}
+
+message FileResponse {
+    StatusCode status = 1;
+    int64 size = 2;
+}
