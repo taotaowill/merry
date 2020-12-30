@@ -55,7 +55,8 @@ func echoServer() error {
 		fmt.Printf("new connection: %s ...\n", session.RemoteAddr().String())
 		stream, err := session.AcceptStream(context.Background())
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			continue
 		}
 
 		// go func
@@ -94,9 +95,10 @@ func echoServer() error {
 					return
 				}
 
+				offset := fileRequest.GetOffset()
 				fileResponse := &merry_proto.FileResponse{
 					Status: merry_proto.StatusCode_kOK,
-					Size: stat.Size(),
+					Size: stat.Size() - offset,
 				}
 				err = common.RpcSendFileResponse(fileResponse, stream)
 				if err != nil {
@@ -104,13 +106,13 @@ func echoServer() error {
 					return
 				}
 
-				err = common.RpcSendFileChunk(ch, f, stream)
+				err = common.RpcSendFileChunk(ch, f, offset, stream)
 				if err != nil {
 					fmt.Println(err)
 					return
 				}
 
-				fmt.Printf("file send done, size: %d\n", stat.Size())
+				fmt.Printf("file send done, size: %d\n", stat.Size() - offset)
 			}
 		}(ch, stream)
 	}

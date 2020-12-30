@@ -94,17 +94,22 @@ func RpcSendFileResponse(res *merry_proto.FileResponse, stream quic.Stream) erro
 	return nil
 }
 
-func RpcSendFileChunk(ch chan int, f *os.File, stream quic.Stream) error {
+func RpcSendFileChunk(ch chan int, f *os.File, offset int64, stream quic.Stream) error {
 	stat, err := f.Stat()
 	if err != nil {
-		return err
+		return nil
 	}
 
 	// send head
 	head := &RpcHead{
 		magic: 1,
-		size:  int(stat.Size()),
+		size:  int(stat.Size() - offset),
 	}
+	_, err = f.Seek(offset, 0)
+	if err != nil {
+		return err
+	}
+
 	headBuff := head.Encode()
 	_, err = stream.Write(headBuff)
 	if err != nil {
@@ -180,17 +185,15 @@ func RpcReadFileResponse(res *merry_proto.FileResponse, stream quic.Stream) erro
 	return nil
 }
 
-func RpcReadFileChunk(fileName string, stream quic.Stream) error {
+func RpcReadFileChunk(f *os.File, stream quic.Stream) error {
 	headBuff := make([]byte, headSize)
 	_, err := io.ReadAtLeast(stream, headBuff, headSize)
 	if err != nil {
 		return err
 	}
-
 	head := Decode(headBuff)
 	bodyBuff := make([]byte, buffSize)
-	f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	defer f.Close()
+
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 
