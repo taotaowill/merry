@@ -8,29 +8,29 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"os"
 	"time"
-	"runtime"
 	"merry/common"
 	"github.com/golang/protobuf/proto"
 	"merry/proto"
+	"runtime"
 )
 
-const SERVER_ADDR = "0.0.0.0:8282"
-var (SLEEP_TIME float64)
-
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	err := echoServer()
-	if err != nil {
-		panic(err)
-	}
+type Flag struct {
+	s string
+	t float64
+	h bool
 }
 
-func echoServer() error {
-	flag.Parse()
-	defer glog.Flush()
+var ff = Flag{}
 
-	SLEEP_TIME = 1
-	listener, err := quic.ListenAddr(SERVER_ADDR, common.GenerateTLSConfig(), nil)
+func init() {
+	flag.StringVar(&ff.s, "s", "0.0.0.0:8282", "server binding address")
+	flag.Float64Var(&ff.t, "t", 1, "sleep time")
+	flag.BoolVar(&ff.h, "h", false, "print this help message")
+}
+
+func serverMain() error {
+	defer glog.Flush()
+	listener, err := quic.ListenAddr(ff.s, common.GenerateTLSConfig(), nil)
 	if err != nil {
 		return err
 	}
@@ -41,8 +41,7 @@ func echoServer() error {
 	go func (ch chan int) {
 		for {
 			ch <- 0
-			time.Sleep(time.Duration(SLEEP_TIME) * time.Microsecond)
-			//fmt.Printf("sleep time: %f\n", SLEEP_TIME)
+			time.Sleep(time.Duration(ff.t) * time.Microsecond)
 		}
 	} (ch)
 
@@ -69,7 +68,7 @@ func echoServer() error {
 
 			fmt.Printf("file request recv:\n%s", proto.MarshalTextString(fileRequest))
 			if fileRequest.GetBandwidth() > 0 {
-				SLEEP_TIME = float64(1000000.0 / fileRequest.GetBandwidth())
+				ff.t = float64(1000000.0 / fileRequest.GetBandwidth())
 				fileResponse := &merry_proto.FileResponse{
 					Status: merry_proto.StatusCode_kOK,
 				}
@@ -118,4 +117,18 @@ func echoServer() error {
 	}
 
 	return nil
+}
+
+func main() {
+	flag.Parse()
+	if ff.h {
+		flag.Usage()
+		return
+	}
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	err := serverMain()
+	if err != nil {
+		panic(err)
+	}
 }
