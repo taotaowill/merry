@@ -1,10 +1,18 @@
-# merry
+# Merry
+file download server with dynamic bandwidth throttling
 
-## build
+
+## Feature
+#### 1.danymic bandwidth throttling
+#### 2.quic protocol (udp based)
+#### 3.resume from break-point
+
+
+## Build
 ./build.sh
 
 
-## usage
+## Usage
 #### server
 ```
 ./ser
